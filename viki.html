@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>один вопрос</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    color: #f3f1f7;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    background:
+        radial-gradient(circle at 20% 15%, rgba(128,105,180,.18), transparent 30%),
+        radial-gradient(circle at 80% 85%, rgba(90,115,180,.14), transparent 30%),
+        #11111a;
+}
+
+.bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.dot {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: #fff;
+    opacity: .18;
+    animation: float 10s linear infinite;
+}
+
+@keyframes float {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+
+    15% {
+        opacity: .18;
+    }
+
+    to {
+        transform: translateY(-110vh);
+        opacity: 0;
+    }
+}
+
+.card {
+    position: relative;
+    z-index: 2;
+    width: min(92vw, 680px);
+    min-height: 500px;
+    padding: 52px 44px;
+    border-radius: 26px;
+
+    border: 1px solid rgba(255,255,255,.10);
+
+    background: rgba(20,20,31,.82);
+    backdrop-filter: blur(18px);
+
+    box-shadow: 0 25px 80px rgba(0,0,0,.4);
+
+    text-align: center;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.label {
+    color: #8e8c9c;
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    font-size: 11px;
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: clamp(29px, 5vw, 47px);
+    line-height: 1.08;
+    margin: 0 0 22px;
+}
+
+.dialogue {
+    color: #c6c4cf;
+    font-size: 17px;
+    line-height: 1.65;
+    max-width: 570px;
+    min-height: 115px;
+    margin: 0 auto;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.question {
+    font-size: clamp(22px, 4vw, 31px);
+    font-weight: 700;
+    min-height: 45px;
+    margin: 10px 0 28px;
+}
+
+.buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    min-height: 65px;
+    position: relative;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    padding: 14px 27px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+
+    transition:
+        transform .16s ease,
+        background .16s ease;
+}
+
+#yes {
+    background: #eeeaf7;
+    color: #17151d;
+}
+
+#yes:hover {
+    transform: translateY(-2px);
+    background: #fff;
+}
+
+#no {
+    color: #d0ced8;
+    background: #25242e;
+    border: 1px solid #363541;
+    position: relative;
+}
+
+.counter {
+    height: 20px;
+    margin-top: 23px;
+    color: #6f6d79;
+    font-size: 12px;
+}
+
+.final {
+    animation: appear .7s ease;
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: scale(.94);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.final h1 {
+    margin-bottom: 16px;
+}
+
+.restart {
+    margin-top: 24px;
+    background: #25242e;
+    color: #aaa8b5;
+    border: 1px solid #363541;
+}
+</style>
+</head>
+
+<body>
+
+<div class="bg" id="bg"></div>
+
+<main class="card" id="card">
+
+    <div class="label">
+        я хочу тебе кое-что сказать
+    </div>
+
+    <h1>
+        ладно, послушай меня секунду
+    </h1>
+
+    <div class="dialogue" id="dialogue">
+        Я не совсем знал, как начать это, так что, думаю, лучше просто сказать это.
+    </div>
+
+    <div class="question" id="question">
+        хочешь быть моей шестёркой из семёрки?
+    </div>
+
+    <div class="buttons" id="buttons">
+
+        <button id="yes">
+            да
+        </button>
+
+        <button id="no">
+            нет
+        </button>
+
+    </div>
+
+    <div class="counter" id="counter"></div>
+
+</main>
+
+<script>
+
+const noScenes = [
+
+    {
+        text:
+        "Ну... технически ты сказала «нет». Но, думаю, мы оба знаем, что это был не тот ответ, который я хотел услышать.",
+
+        question:
+        "может, передумаешь?"
+    },
+
+    {
+        text:
+        "Ладно, второй шанс. Сделаю вид, что ничего не произошло, и спрошу ещё раз, потому что я явно не собираюсь так быстро сдаваться.",
+
+        question:
+        "хочешь быть моей шестёркой из семёрки?"
+    },
+
+    {
+        text:
+        "Я начинаю подозревать, что ты нажимаешь эту кнопку просто ради того, чтобы посмотреть, что произойдёт. И, если честно, не знаю, стоит ли мне тебе это позволять.",
+
+        question:
+        "ты точно хочешь продолжать говорить «нет»?"
+    },
+
+    {
+        text:
+        "Слушай, я не хочу на тебя давить или что-то такое... но я сделал всю эту страницу именно ради этого вопроса.",
+
+        question:
+        "а что, если в этот раз ты скажешь «да»?"
+    },
+
+    {
+        text:
+        "Пять раз. Уже пять раз ты могла выбрать лёгкий путь. Но мы всё ещё здесь.",
+
+        question:
+        "ты правда заставишь меня дойти до самого конца?"
+    },
+
+    {
+        text:
+        "На этом этапе у меня с кнопкой «нет» уже сложные отношения. Она хочет, чтобы ты на неё нажала, а я явно нет.",
+
+        question:
+        "последняя попытка? ну... возможно, нет."
+    },
+
+    {
+        text:
+        "Я уже не знаю, что впечатляет больше: что ты продолжаешь говорить «нет» или что я продолжаю находить способы спрашивать тебя.",
+
+        question:
+        "давай, окончательный ответ"
+    },
+
+    {
+        text:
+        "Восемь попыток. Я мог бы сдаться, но после того, как мы зашли так далеко, было бы довольно глупо сделать это сейчас.",
+
+        question:
+        "хочешь быть моей шестёркой из семёрки?"
+    },
+
+    {
+        text:
+        "Ладно. Это официально один из самых долгих моментов в признании, которое вообще-то должно было быть довольно простым.",
+
+        question:
+        "ну что скажешь?"
+    },
+
+    {
+        text:
+        "Десять. Ты действительно дошла до десяти. Больше никаких скрытых попыток, секретных кнопок или других вопросов после этого.",
+
+        question:
+        "хочешь быть моей шестёркой из семёрки?"
+    }
+
+];
+
+let noCount = 0;
+let accepted = false;
+
+const card = document.getElementById("card");
+const dialogue = document.getElementById("dialogue");
+const question = document.getElementById("question");
+const no = document.getElementById("no");
+const yes = document.getElementById("yes");
+const counter = document.getElementById("counter");
+const buttons = document.getElementById("buttons");
+
+
+function moveNo() {
+
+    if (accepted || noCount >= 10) {
+        return;
+    }
+
+    const scene = noScenes[noCount];
+
+    noCount++;
+
+    dialogue.textContent = scene.text;
+    question.textContent = scene.question;
+
+    counter.textContent =
+        `попытка ${noCount} из 10`;
+
+    /*
+        Чем больше попыток,
+        тем дальше убегает кнопка.
+    */
+
+    const rangeX =
+        Math.min(260, 50 + noCount * 24);
+
+    const rangeY =
+        Math.min(110, 20 + noCount * 8);
+
+    const x =
+        (Math.random() * 2 - 1) * rangeX;
+
+    const y =
+        (Math.random() * 2 - 1) * rangeY;
+
+    const rotation =
+        Math.random() * 12 - 6;
+
+    no.style.transform =
+        `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
+
+
+    if (noCount === 10) {
+
+        no.style.opacity = ".45";
+
+        no.textContent =
+            "больше нет";
+    }
+}
+
+
+function accept() {
+
+    if (accepted) {
+        return;
+    }
+
+    accepted = true;
+
+    let intro;
+
+    if (noCount === 0) {
+
+        intro =
+            "Ты даже не представляешь, как я рад, что ответ оказался таким простым.";
+
+    } else {
+
+        intro =
+            `После ${noCount} попыток, нескольких побегов кнопки и довольно большой настойчивости...`;
+    }
+
+
+    card.classList.add("final");
+
+    card.innerHTML = `
+
+        <div class="label">
+            ответ получен
+        </div>
+
+        <h1>
+            значит, это «да»
+        </h1>
+
+        <div class="dialogue">
+
+            ${intro}
+
+            <br><br>
+
+            Думаю, теперь я могу сказать это официально:
+            мы теперь вместе.
+
+        </div>
+
+        <div class="question">
+            6 + 7 = мы
+        </div>
+
+        <div
+            style="
+                color:#85828f;
+                font-size:14px;
+                line-height:1.6
+            "
+        >
+            И да, даже после всех этих попыток я всё равно продолжал тебя спрашивать.
+        </div>
+
+        <button
+            class="restart"
+            onclick="location.reload()"
+        >
+            начать заново
+        </button>
+
+    `;
+
+    celebrate();
+}
+
+
+function celebrate() {
+
+    const symbols = [
+        "♥",
+        "·",
+        "✦",
+        "♡"
+    ];
+
+    for (let i = 0; i < 24; i++) {
+
+        const el =
+            document.createElement("div");
+
+        el.textContent =
+            symbols[
+                Math.floor(
+                    Math.random() * symbols.length
+                )
+            ];
+
+        el.style.position = "fixed";
+
+        el.style.left =
+            Math.random() * 100 + "vw";
+
+        el.style.top =
+            (75 + Math.random() * 15) + "vh";
+
+        el.style.color =
+            "rgba(235,232,245,.8)";
+
+        el.style.fontSize =
+            (12 + Math.random() * 24) + "px";
+
+        el.style.zIndex = "10";
+
+        el.style.pointerEvents = "none";
+
+        document.body.appendChild(el);
+
+
+        const animation =
+            el.animate(
+
+                [
+                    {
+                        transform:
+                            "translateY(0) scale(.6)",
+
+                        opacity: 0
+                    },
+
+                    {
+                        transform:
+                            "translateY(-55vh) scale(1)",
+
+                        opacity: 1
+                    },
+
+                    {
+                        transform:
+                            "translateY(-100vh) scale(.7)",
+
+                        opacity: 0
+                    }
+                ],
+
+                {
+                    duration:
+                        1600 + Math.random() * 1400,
+
+                    easing:
+                        "ease-out"
+                }
+
+            );
+
+
+        animation.onfinish =
+            () => el.remove();
+    }
+}
+
+
+yes.addEventListener(
+    "click",
+    accept
+);
+
+
+no.addEventListener(
+    "mouseenter",
+    moveNo
+);
+
+
+no.addEventListener(
+    "click",
+    function(e) {
+
+        e.preventDefault();
+
+        moveNo();
+    }
+);
+
+
+/*
+    Для телефона:
+    при касании кнопка тоже убегает.
+*/
+
+no.addEventListener(
+    "touchstart",
+
+    function(e) {
+
+        e.preventDefault();
+
+        moveNo();
+
+    },
+
+    {
+        passive: false
+    }
+);
+
+
+/*
+    Создаём маленькие точки
+    на фоне.
+*/
+
+for (let i = 0; i < 18; i++) {
+
+    const d =
+        document.createElement("div");
+
+    d.className = "dot";
+
+    d.style.left =
+        Math.random() * 100 + "%";
+
+    d.style.top =
+        (Math.random() * 100 + 20) + "%";
+
+    d.style.animationDelay =
+        Math.random() * 10 + "s";
+
+    d.style.animationDuration =
+        (8 + Math.random() * 8) + "s";
+
+    document
+        .getElementById("bg")
+        .appendChild(d);
+}
+
+</script>
+
+</body>
+</html>
